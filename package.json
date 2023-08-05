@@ -1,0 +1,19 @@
+{
+  "name": "advent_of_code",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Piotr Majcher <majcherpiotr.dev@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write",
+    "run-exercise": "ts-node --esm"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.6",
+    "nodemon": "^3.0.1",
+    "prettier": "^3.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6"
+  }
+}
