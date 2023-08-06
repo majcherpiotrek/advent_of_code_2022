@@ -35,6 +35,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { averageTimeSync } from "../profiling.js";
+import { getItemPriority } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,26 +43,6 @@ const __dirname = path.dirname(__filename);
 const data = fs.readFileSync(path.resolve(__dirname, "./input_data"), {
   encoding: "utf8",
 });
-
-const a_code = "a".charCodeAt(0);
-const A_code = "A".charCodeAt(0);
-const z_code = "z".charCodeAt(0);
-const Z_code = "Z".charCodeAt(0);
-
-const a_priority = 1;
-const A_priority = 27;
-
-function getItemPriority(c: string): number {
-  const code = c.charCodeAt(0);
-
-  if (code >= a_code && code <= z_code) {
-    return code - (a_code - a_priority);
-  } else if (code >= A_code && code <= Z_code) {
-    return code - (A_code - A_priority);
-  } else {
-    return 0;
-  }
-}
 
 function checkRucksacks(rucksacksList: string) {
   return rucksacksList.split("\n").reduce((sumOfPriorities, rucksack) => {
