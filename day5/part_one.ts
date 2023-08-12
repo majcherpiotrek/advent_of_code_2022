@@ -53,6 +53,8 @@ After the rearrangement procedure completes, what crate ends up on top of each s
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { parseInputData } from "./common.js";
+import { CratesMap, Instruction } from "./types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -60,52 +62,6 @@ const __dirname = path.dirname(__filename);
 const data = fs.readFileSync(path.resolve(__dirname, "input_data"), {
   encoding: "utf-8",
 });
-
-type Column = {
-  columnIndex: number;
-  matrixIndex: number;
-};
-
-function getCratesColumnIndexes(cratesColumnIndexesStr: string): Column[] {
-  const numbersRegExp = /[0-9]+/g;
-  return Array.from(cratesColumnIndexesStr.matchAll(numbersRegExp)).flatMap(
-    (match) => {
-      const num = parseInt(match[0]);
-      return Number.isNaN(num) || match.index === undefined
-        ? []
-        : [
-            {
-              columnIndex: num,
-              matrixIndex: match.index,
-            },
-          ];
-    },
-  );
-}
-
-type Instruction = {
-  numOfElements: number;
-  from: number;
-  to: number;
-};
-function parseInstruction(instruction: string): Instruction | null {
-  //move 1 from 2 to 1
-  const [_, numOfElementsStr, __, fromStr, ___, toStr] =
-    instruction.split(/\s+/g);
-  const numOfElements = parseInt(numOfElementsStr);
-  const from = parseInt(fromStr);
-  const to = parseInt(toStr);
-  if (Number.isNaN(numOfElements) || Number.isNaN(from) || Number.isNaN(to)) {
-    return null;
-  }
-  return {
-    numOfElements,
-    from,
-    to,
-  };
-}
-
-type CratesMap = Record<string, string[]>;
 
 function moveCrane(cratesMap: CratesMap, instruction: Instruction): CratesMap {
   for (let i = 0; i < instruction.numOfElements; i++) {
@@ -117,31 +73,7 @@ function moveCrane(cratesMap: CratesMap, instruction: Instruction): CratesMap {
   return cratesMap;
 }
 
-const [cratesStr, instructionsStr] = data.split("\n\n");
-const cratesRows = cratesStr.split("\n");
-const columns = getCratesColumnIndexes(cratesRows.at(-1) ?? "");
-const crates = cratesRows.slice(0, cratesRows.length - 1).map((row) => {
-  return columns.map(({ matrixIndex }) => {
-    const crateOrEmpty = row.charAt(matrixIndex);
-    return /[A-Z]/g.test(crateOrEmpty) ? crateOrEmpty : null;
-  });
-});
-
-const cratesMap: CratesMap = columns.reduce((acc, column, index) => {
-  const columnContent = crates.flatMap((cratesRow) => {
-    const crate = cratesRow[index];
-    return crate ? [crate] : [];
-  });
-  return {
-    ...acc,
-    [column.columnIndex]: columnContent,
-  };
-}, {});
-
-const instructions = instructionsStr
-  .split("\n")
-  .map(parseInstruction)
-  .filter((instr): instr is Instruction => instr !== null);
+const { instructions, cratesMap } = parseInputData(data);
 
 const afterReArrangement = instructions.reduce(moveCrane, cratesMap);
 console.log(
