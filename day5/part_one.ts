@@ -55,6 +55,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { parseInputData } from "./common.js";
 import { CratesMap, Instruction } from "./types.js";
+import { averageTimeSync } from "../profiling.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,7 +64,10 @@ const data = fs.readFileSync(path.resolve(__dirname, "input_data"), {
   encoding: "utf-8",
 });
 
-function moveCrane(cratesMap: CratesMap, instruction: Instruction): CratesMap {
+function moveCraneUsingMutatingArrayFunctions(
+  cratesMap: CratesMap,
+  instruction: Instruction,
+): CratesMap {
   for (let i = 0; i < instruction.numOfElements; i++) {
     const crateToMove = cratesMap[instruction.from.toString()]?.shift();
     if (crateToMove) {
@@ -73,12 +77,67 @@ function moveCrane(cratesMap: CratesMap, instruction: Instruction): CratesMap {
   return cratesMap;
 }
 
-const { instructions, cratesMap } = parseInputData(data);
+function moveCraneWithoutMutatingArrays(
+  cratesMap: CratesMap,
+  instruction: Instruction,
+): CratesMap {
+  const from = instruction.from.toString();
+  const to = instruction.to.toString();
+  const cratesToMove = cratesMap[from]?.slice(0, instruction.numOfElements);
+  if (cratesToMove && cratesToMove.length > 0) {
+    return {
+      ...cratesMap,
+      [from]: cratesMap[from]?.slice(instruction.numOfElements),
+      [to]: [...cratesToMove.reverse(), ...cratesMap[to]],
+    };
+  } else {
+    return cratesMap;
+  }
+}
 
-const afterReArrangement = instructions.reduce(moveCrane, cratesMap);
+const { instructions, cratesMap } = parseInputData(data);
+const referenceCratesMap = structuredClone(cratesMap);
+
+const cratesMapClone1 = structuredClone(cratesMap);
+console.time("Mutable approach");
+const afterReArrangement1 = instructions.reduce(
+  moveCraneUsingMutatingArrayFunctions,
+  cratesMapClone1,
+);
+console.timeEnd("Mutable approach");
 console.log(
-  "result",
-  Object.values(afterReArrangement)
+  "Mutable approach result: ",
+  Object.values(afterReArrangement1)
     .map((crates) => crates[0])
     .join(""),
+);
+const cratesMapClone2 = structuredClone(cratesMap);
+const avgTime1 = averageTimeSync(1000, () =>
+  instructions.reduce(moveCraneUsingMutatingArrayFunctions, cratesMapClone2),
+);
+console.log(`Mutable approach avg time: ${avgTime1.toFixed(3)} ms`);
+console.log(
+  "Making sure it was mutated: ",
+  JSON.stringify(cratesMapClone1) !== JSON.stringify(referenceCratesMap),
+);
+
+console.time("Immutable approach");
+const afterReArrangement2 = instructions.reduce(
+  moveCraneWithoutMutatingArrays,
+  cratesMap,
+);
+console.timeEnd("Immutable approach");
+console.log(
+  "Immutable approach result: ",
+  Object.values(afterReArrangement2)
+    .map((crates) => crates[0])
+    .join(""),
+);
+const avgTime2 = averageTimeSync(1000, () =>
+  instructions.reduce(moveCraneWithoutMutatingArrays, cratesMap),
+);
+console.log(`Immutable approach avg time: ${avgTime2.toFixed(3)} ms`);
+console.log(
+  "Making sure it was actually immutable: ",
+  JSON.stringify(cratesMap) === JSON.stringify(referenceCratesMap),
 );
