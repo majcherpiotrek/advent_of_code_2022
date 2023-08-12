@@ -31,36 +31,21 @@ How many characters need to be processed before the first start-of-packet marker
 
 Your puzzle answer was 1766.
 */
-import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { MessageMarkerDetector } from "./common.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const readstream = fs.createReadStream(path.resolve(__dirname, "input_data"), {
-  encoding: "utf8",
-  highWaterMark: 4,
-});
+const markerDetector = new MessageMarkerDetector(
+  4,
+  path.resolve(__dirname, "input_data"),
+);
 
-const buffer: string[] = [];
-let numOfCharactersTillMarkerEnd = 0;
-
-readstream.on("close", () => {
-  console.log("marker", buffer.join(""));
-  console.log("character num", numOfCharactersTillMarkerEnd);
-});
-
-readstream.on("data", (chunk) => {
-  for (const character of Array.from(chunk.toString())) {
-    numOfCharactersTillMarkerEnd++;
-    buffer.push(character);
-    if (buffer.length === 5) {
-      buffer.shift();
-      if (new Set(buffer).size === buffer.length) {
-        readstream.destroy();
-        break;
-      }
-    }
-  }
-});
+markerDetector
+  .on("end", (possibleMarker) =>
+    console.log(possibleMarker ? "succcess!" : "No marker has been found!"),
+  )
+  .on("marker-detected", (marker) => console.log("Marker detected", marker))
+  .run();
