@@ -1,11 +1,13 @@
 import {
   Directory,
   ParsedInputRow,
-  isCommand,
+  isChangeDirectoryCommand,
   isDirectoryInfo,
   isFile,
   File,
   isDirectory,
+  ParsedInput,
+  isFileInfo,
 } from "./types.js";
 
 function resolvePath(
@@ -27,68 +29,46 @@ function resolvePath(
   );
 }
 
-function addEmptyChildDirectoryIfNotExists(
-  directory: Directory,
-  childDirName: string,
-): Directory {
-  if (!directory.children[childDirName]) {
-    const newDirectory: Directory = {
-      type: "dir",
-      children: {},
-      name: childDirName,
-      size: 0,
-      parent: directory,
-    };
-    // TODO might be actually better to mutate the directory for performance reasons
-    return {
-      ...directory,
-      children: {
-        ...directory.children,
-        [childDirName]: newDirectory,
-      },
-    };
-  }
-  return directory;
-}
-
-export type State = {
+type State = {
   directoriesTree: Directory;
   path: string[];
 };
 
-function processChangeDirectoryCommand(
-  currentDirectory: Directory,
-  dir: string,
-) {
-  if (dir === "..") {
-    return currentDirectory.parent;
-  } else {
-    const updatedDirectory = addEmptyChildDirectoryIfNotExists(
-      currentDirectory,
-      dir,
-    );
-    return updatedDirectory;
-  }
-}
+const buildEmptyDirectory = (
+  parent: Directory,
+  dirName: string,
+): Directory => ({
+  type: "dir",
+  children: {},
+  name: dirName,
+  size: 0,
+  parent,
+});
 
-function processRow(currentDirectory: Directory, row: ParsedInputRow) {
-  if (isCommand(row)) {
-    state, row.dir;
-  } else if (isDirectoryInfo(row)) {
-    const currentDir = getCurrentDirectory(state);
-    if (!currentDir.children[row.dir]) {
-      const newDirectory: Directory = {
-        type: "dir",
-        children: {},
-        name: row.dir,
-        size: 0,
-        parent: currentDir,
-      };
-      currentDir.children[row.dir] = newDirectory;
-    }
-  } else {
-    const currentDir = getCurrentDirectory(state);
-    if (!currentDir.children[row.file]) {
+function processRow(state: State, row: ParsedInputRow): State {
+  const currentDir = resolvePath(state.directoriesTree, state.path);
+  if (currentDir && isDirectory(currentDir)) {
+    if (isChangeDirectoryCommand(row)) {
+      if (row.dir === "..") {
+        state.path.pop();
+        return state;
+      } else if (row.dir === "/") {
+        return state;
+      } else if (currentDir.children[row.dir]) {
+        state.path.push(row.dir);
+        return state;
+      } else {
+        currentDir.children[row.dir] = buildEmptyDirectory(currentDir, row.dir);
+        return state;
+      }
+    } else if (
+      isDirectoryInfo(row) &&
+      !currentDir.children[row.dir] &&
+      row.dir !== "/"
+    ) {
+      currentDir.children[row.dir] = buildEmptyDirectory(currentDir, row.dir);
+      return state;
+    } else if (isFileInfo(row) && !currentDir.children[row.file]) {
       const newFile: File = {
         name: row.file,
         size: row.size,
@@ -96,11 +76,31 @@ function processRow(currentDirectory: Directory, row: ParsedInputRow) {
       };
 
       currentDir.children[row.file] = newFile;
+
       for (let dir = currentDir; dir.parent !== null; dir = dir.parent) {
         dir.size += newFile.size;
       }
+
+      state.directoriesTree.size += newFile.size;
+
+      return state;
     }
   }
 
   return state;
+}
+
+export function buildDirectoriesTree(input: ParsedInput): Directory {
+  const initialState: State = {
+    directoriesTree: {
+      name: "/",
+      children: {},
+      parent: null,
+      size: 0,
+      type: "dir",
+    },
+    path: [],
+  };
+
+  return input.reduce(processRow, initialState).directoriesTree;
 }

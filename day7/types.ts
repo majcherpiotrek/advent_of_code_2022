@@ -36,7 +36,11 @@ export const isDirectoryInfo = (
   row: LsCommandResultRow,
 ): row is DirectoryInfo => "dir" in row;
 
+export const isFileInfo = (row: LsCommandResultRow): row is FileInfo =>
+  "file" in row;
+
 export type ParsedInputRow = ChangeDirectoryCommand | LsCommandResultRow;
-export const isCommand = (row: ParsedInputRow): row is ChangeDirectoryCommand =>
-  "command" in row;
+export const isChangeDirectoryCommand = (
+  row: ParsedInputRow,
+): row is ChangeDirectoryCommand => "command" in row;
 export type ParsedInput = ParsedInputRow[];
