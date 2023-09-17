@@ -21,7 +21,7 @@ export function averageTimeSync(iterations: number, fn: () => unknown) {
     const start = performance.now();
     fn();
     const end = performance.now();
-    const time = (sumTime = sumTime + end - start);
+    sumTime = sumTime + end - start;
   }
 
   return sumTime / iterations;
