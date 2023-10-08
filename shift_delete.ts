@@ -4,7 +4,7 @@ export function shiftDelete<T>(arr: T[], index: number) {
     for (let i = index; i > 0; i--) {
       arr[i] = arr[i - 1];
     }
-   arr.shift();
+    arr.shift();
   } else {
     for (let i = index; i < arr.length - 2; i++) {
       arr[i] = arr[i + 1];
