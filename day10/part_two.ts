@@ -46,6 +46,9 @@ function decodeProgram(input: string): Program {
     .flatMap((row) => (row === "" ? [] : [decodeInstruction(row)]));
 }
 
+const SCREEN_WIDTH = 40;
+const SCREEN_HEIGHT = 6;
+
 interface ProgramState {
   X: number;
   cycle: number;
@@ -56,32 +59,16 @@ const initialState: ProgramState = {
   cycle: 0,
 };
 
-const SCREEN_WIDTH = 40;
-const SCREEN_HEIGHT = 6;
-
-const screenRow = Array(SCREEN_WIDTH).fill(".");
-const screen: string[][] = Array(SCREEN_HEIGHT).fill(screenRow);
-
-function drawSpritePosition(state: ProgramState) {
-  const print = Array(SCREEN_WIDTH).fill(".");
-  for (let i = state.X - 1; i <= state.X + 1; i++) {
-    if (i >= 0 && i < SCREEN_WIDTH) {
-      print[i] = "#";
-    }
-  }
-  console.log(`Sprite position: ${print.join("")}`);
-}
-
 function processInstruction(
   state: ProgramState,
   instruction: Instruction,
-  cycleSnapshot: (state: ProgramState) => void,
+  onCycleSnapshot: (state: ProgramState) => void,
 ): ProgramState {
   switch (instruction.name) {
     case InstructionName.ADDX:
       for (let i = 1; i <= 2; i++) {
         state.cycle++;
-        cycleSnapshot(state);
+        onCycleSnapshot(state);
         if (i === 2) {
           state.X = state.X + instruction.value;
         }
@@ -89,20 +76,42 @@ function processInstruction(
       return state;
     case InstructionName.NOOP:
       state.cycle++;
-      cycleSnapshot(state);
+      onCycleSnapshot(state);
       return state;
   }
 }
 
+function currentlyRenderedPixel(state: ProgramState): [number, number] {
+  const x = (state.cycle - 1) % SCREEN_WIDTH;
+  const y = Math.floor((state.cycle - 1) / SCREEN_WIDTH);
+  return [x, y];
+}
+
+function createScreenRenderer(screen: string[][]) {
+  return function (state: ProgramState) {
+    const [x, y] = currentlyRenderedPixel(state);
+    if (x >= state.X - 1 && x <= state.X + 1) {
+      screen[y][x] = "#";
+    }
+  };
+}
+
+const screen: string[][] = Array(SCREEN_HEIGHT)
+  .fill(".".repeat(SCREEN_WIDTH))
+  .map((r) => r.split(""));
+
 function runProgram(
   program: Program,
   initialState: ProgramState,
+  rerenderScreen: (state: ProgramState) => void,
 ): ProgramState {
   return program.reduce((state, instruction) => {
-    return processInstruction(state, instruction, (state) => {
-      drawSpritePosition(state);
-    });
+    return processInstruction(state, instruction, rerenderScreen);
   }, initialState);
 }
 
-runProgram(decodeProgram(data), initialState);
+runProgram(decodeProgram(data), initialState, createScreenRenderer(screen));
+
+const result = screen.map((row) => row.join("")).join("\n");
+console.log("RESULT:\n\n");
+console.log(result);
